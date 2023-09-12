@@ -62,60 +62,72 @@ def cc1_automation(cartera):
     grabaciones = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="QFiltersCallStatus-CallRecord"]/label[4]/span')))
     grabaciones.click()
     time.sleep(5)
-    table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'table-responsive')))
-    label = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'thead')))
-    rows = driver.find_elements(By.TAG_NAME, 'tr')  
-    labels = []
-    df = []
-    time.sleep(2)
     
-    for row in rows:
-        buttons = row.find_elements(By.TAG_NAME, 'button')
-        for button in buttons:
-            onclick = button.get_attribute('onclick')
-            if onclick and 'DownloadCallRecording' in onclick:
-                driver.execute_script("arguments[0].scrollIntoView();", button)
-                time.sleep(2)
-                button.click()
-                # Realiza aquí la lógica para descargar el archivo
-
-        encabezado = driver.find_elements(By.TAG_NAME, 'th')
-        labels.append(row.text)
-        datos = driver.find_elements(By.TAG_NAME, 'td')
-        df.append(row.text)
-    #nextt = driver.find_element(By.CSS_SELECTOR, 'a i.fa.fa-angle-right.fa-lg')
-    #nextt.click()
-    final = driver.find_element(By.XPATH, '//*[@id="divBackgrid-CallRecord"]/div/ul/li[10]/a')
-    final.click()
-    time.sleep(5)
+    time.sleep(2)
+    #final = driver.find_element(By.XPATH, '//*[@id="divBackgrid-CallRecord"]/div/ul/li[14]/a/i')
+    #driver.execute_script("arguments[0].scrollIntoView();", final)
+    #final.click()
+    #time.sleep(5)
     # Encuentra todos los elementos "a" que contienen números de página en el título
-    page_elements = driver.find_elements(By.XPATH, '//a[starts-with(@title, "Page ")]')
-
+    #page_elements = driver.find_elements(By.XPATH, '//a[starts-with(@title, "Page ")]')
     # Inicializa una lista para almacenar los números de página como enteros
-    page_numbers = []
+    #page_numbers = []
+
+    
 
     # Extrae los números de página y los convierte en enteros
-    for page_element in page_elements:
-        page_title = page_element.get_attribute("title")
-        page_number = int(page_title.split(" ")[1])  # Divide el título y toma el número
-        page_numbers.append(page_number)
+    #for page_element in page_elements:
+     #   page_title = page_element.get_attribute("title")
+      #  page_number = int(page_title.split(" ")[1])  # Divide el título y toma el número
+       # page_numbers.append(page_number)
 
     # Obtiene el número máximo de página
-    max_page_number = max(page_numbers)
+    #max_page_number = max(page_numbers)
+    #inicio = driver.find_element(By.XPATH, '//*[@id="divBackgrid-CallRecord"]/div/ul/li[1]/a/i')
+    #inicio.click()
+    
+    df = []
 
-    print(f"El número máximo de página es: {max_page_number}")
+    #for page_number in range(1, max_page_number + 1):
+    
+
+    # Encontrar el botón de "Siguiente"
+    next_button = driver.find_element(By.CSS_SELECTOR, 'a i.fa.fa-angle-right.fa-lg')
+    # Inicializar una variable para contar las páginas
+    page_number = 1
+    while "disabled" not in next_button.get_attribute("class"):
+        table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'table-responsive')))
+        label = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'thead')))
+        
+        # Obtener las filas después de hacer clic en "Siguiente"
+        rows = driver.find_elements(By.TAG_NAME, 'tr')  
+        labels = []
+        for row in rows:
+            buttons = row.find_elements(By.TAG_NAME, 'button')
+            for button in buttons:
+                onclick = button.get_attribute('onclick')
+                if onclick and 'DownloadCallRecording' in onclick:
+                    driver.execute_script("arguments[0].scrollIntoView();", button)
+                    time.sleep(2)
+                    button.click()
+                    # Realiza aquí la lógica para descargar el archivo
+
+            encabezado = driver.find_elements(By.TAG_NAME, 'th')
+            labels.append(row.text)
+            datos = driver.find_elements(By.TAG_NAME, 'td')
+            df.append(row.text)
+    
+        next_button.click()
+        time.sleep(5)
+        # Actualizar el botón "Siguiente" para la próxima iteración
+        next_button = driver.find_element(By.CSS_SELECTOR, 'a i.fa.fa-angle-right.fa-lg')
+        
+        # Incrementar el número de página
+        page_number += 1
 
     # Cierra el navegador
     driver.quit()
-            #button = row.find_element(By.XPATH, './/button[contains(@onclick, "DownloadCallRecording")]')
-            #button.click()
-            
-    
-        
-        
-                       
-    time.sleep(10)
-    
+    print(df) 
 
 if __name__ == '__main__':
     cc1_automation()
