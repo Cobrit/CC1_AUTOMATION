@@ -44,6 +44,6 @@ Crea un Pull Request en el repositorio original.
 
 
 ## Contacto
-Tu Nombre - polito.bryan@gmail.com
+Bryan Antonio Polito Palma - polito.bryan@gmail.com
 Enlace al repositorio: [CC1_AUTOMATION](https://github.com/Cobrit/CC1_AUTOMATION/)
    
