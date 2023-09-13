@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 from selenium import webdriver
 from seleniumbase import Driver
@@ -14,29 +13,40 @@ from bs4 import BeautifulSoup
 import numpy as np
 import click
 import os
+import re
 
-
-@click.command()
-@click.option('--cartera', prompt = 'Ingresa la cartera', help = "La cartera a descargar sus audios")
-
-def rename_downloaded_file(id_value):
-    # Especifica la ruta completa donde deseas guardar los archivos
+def rename_downloaded_file(file_extension):
+    # Directorio donde deseas guardar los archivos
     save_directory = r'C:\Users\DELL PREMIUM\Documents\REPOSITORIOS\CC1_AUTOMATION\DESCARGA'
-    # Supongamos que el archivo se descargó en el directorio actual
-    download_directory = os.getcwd()
+    
+    # Directorio donde se descargaron los archivos (cambia esto según tu caso)
+    download_directory = r'C:\Users\DELL PREMIUM\Downloads'
 
     # Encuentra el archivo descargado (puedes ajustar el patrón según la descarga)
     for filename in os.listdir(download_directory):
-        if filename.startswith(f"{id_value}_") and filename.endswith(file_extension):
-            # Construye la ruta completa del nuevo archivo con el ID
-            new_filepath = os.path.join(save_directory, filename)
+        if filename.endswith(file_extension):
+            # Utiliza una expresión regular para encontrar el último grupo de números después del cuarto guión
+            match = re.search(r'[^-]+$', filename)
+            
+            if match:
+                # Obtiene el resultado de la coincidencia (el último grupo de números)
+                ultimo_grupo_numerico = match.group(0)
+                
+                # Construye la ruta completa del nuevo archivo con el nuevo nombre
+                new_filepath = os.path.join(save_directory, ultimo_grupo_numerico)
 
-            # Construye la ruta completa del archivo descargado actual
-            current_filepath = os.path.join(download_directory, filename)
+                # Construye la ruta completa del archivo descargado actual
+                current_filepath = os.path.join(download_directory, filename)
 
-            # Mueve el archivo a la ubicación deseada y renómbralo
-            os.rename(current_filepath, new_filepath)
+                # Mueve el archivo a la ubicación deseada y renómbralo
+                os.rename(current_filepath, new_filepath)
 
+                if os.path.exists(new_filepath):
+                    print(f"Archivo movido y renombrado correctamente a: {new_filepath}")
+                else:
+                    print(f"No se pudo mover el archivo a la ubicación deseada.")
+            else:
+                print("No se encontró un grupo numérico después del cuarto guión.")
 
 @click.command()
 @click.option('--cartera', prompt = 'Ingresa la cartera', help = "La cartera a descargar sus audios")
@@ -93,18 +103,22 @@ def cc1_automation(cartera):
 
     while True:
         table = wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'table-responsive')))
-        label = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'thead')))
+        # Obtener el contenido HTML de la tabla
+        table_html = table.get_attribute("outerHTML")
+        # Analizar la tabla con BeautifulSoup
+        soup = BeautifulSoup(table_html, "html.parser")
+
+        # Obtener los nombres de las columnas desde los elementos <th> en el encabezado de la tabla
+        column_names = [th.text for th in soup.find_all("th")]
+        # label = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'thead')))
         
+        data = []
+
         # Obtener las filas después de hacer clic en "Siguiente"
-        rows = driver.find_elements(By.TAG_NAME, 'tr')  
+        rows_ = driver.find_elements(By.TAG_NAME, 'tr')  
+        rows = soup.find_all("tr")
         labels = []
-        for row in rows:
-
-            # Obtén el ID de la grabación, supongamos que está en la primera columna (cambia el índice si es diferente)
-            id_column = row.find_element(By.TAG_NAME, 'td')[0]
-            id_value = id_column.text
-            print(id_value)
-
+        for row in rows_:
             buttons = row.find_elements(By.TAG_NAME, 'button')
             for button in buttons:
                 onclick = button.get_attribute('onclick')
@@ -112,14 +126,52 @@ def cc1_automation(cartera):
                     driver.execute_script("arguments[0].scrollIntoView();", button)
                     time.sleep(2)
                     button.click()
-
-                    #Renombra el archivo de descarga
-                    rename_downloaded_file(id_value)
+        for row in rows:
+            cells = row.find_all("td")
+            row_data = [cell.text.strip() for cell in cells]
+            data.append(row_data)        
             encabezado = driver.find_elements(By.TAG_NAME, 'th')
             labels.append(row.text)
             datos = driver.find_elements(By.TAG_NAME, 'td')
-            df.append(row.text)
+        
 
+
+        # Supongamos que las columnas de tu DataFrame tienen estos nombres
+        column_names = ["ID", "Tipo", "Campaña", "Agente", "Origen", "Número", "Destino", "Estatus", "Duración", "Facturable", "Tarifa / Min", "Costo", "Botón1", "Botón2", "Inicio"]
+
+        # Crear un DataFrame de Pandas
+        df_pandas = pd.DataFrame(data, columns=column_names)
+
+        # Imprimir el DataFrame
+        print(df_pandas)
+        # Directorio donde deseas guardar el archivo CSV
+        save_directory = r'C:\Users\DELL PREMIUM\Documents\REPOSITORIOS\CC1_AUTOMATION\DESCARGA'
+
+        # Nombre del archivo CSV (puedes cambiarlo según tus preferencias)
+        csv_filename = 'datos_extraidos.csv'
+
+        # Ruta completa del archivo CSV
+        csv_filepath = os.path.join(save_directory, csv_filename)
+
+        # Guardar el DataFrame en un archivo CSV
+        df_pandas.to_csv(csv_filepath, index=False)  # El argumento index=False evita que se guarde el índice en el CSV
+
+        
+        # Verificar si el archivo CSV ya existe
+        if os.path.isfile(csv_filepath):
+            # Si el archivo existe, carga el CSV existente en un DataFrame
+            existing_df = pd.read_csv(csv_filepath)
+            
+            # Concatena el DataFrame existente con el nuevo DataFrame df_pandas
+            combined_df = pd.concat([existing_df, df_pandas], ignore_index=True)
+        else:
+            # Si el archivo no existe, simplemente usa df_pandas
+            combined_df = df_pandas
+
+        # Guarda el DataFrame combinado en un archivo CSV
+        combined_df.to_csv(csv_filepath, index=False)
+
+        print(f"DataFrame guardado en: {csv_filepath}")
 
 
         # Verificar si el botón está deshabilitado
@@ -135,10 +187,11 @@ def cc1_automation(cartera):
         
         # Incrementar el número de página
         page_number += 1
-
+    #Renombra el archivo de descarga
+    rename_downloaded_file(".wav")
     # Cierra el navegador
     driver.quit()
-    print(df) 
+    
 
 if __name__ == '__main__':
     cc1_automation()
